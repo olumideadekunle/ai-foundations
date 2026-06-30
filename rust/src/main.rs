@@ -7,108 +7,33 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
-fn get_authenticated_client() -> Result<Client, bitcoincore_rpc::Error> {
-    let rpc_url = "http://127.0.0.1:18443";
-
-    // 1. Array of potential credential configurations used by Btrust environments
-    let auth_strategies = vec![
-        // Strategy A: Btrust / Bitcoin Core standard default test environment values
-        Auth::UserPass("rpcuser".to_string(), "rpcpassword".to_string()),
-        // Strategy B: The custom template values provided in the original main.rs file
-        Auth::UserPass("alice".to_string(), "password".to_string()),
-        // Strategy C: Automated cookie detection relative paths
-        Auth::None,
-    ];
-
-    for auth in auth_strategies {
-        if let Ok(client) = Client::new(rpc_url, auth) {
-            // Validate credentials against an actual command to filter out 401 statuses
-            if client.get_blockchain_info().is_ok() {
-                println!("Successfully authenticated with node! - main.rs:27");
-                return Ok(client);
-            }
-        }
-    }
-
-    // Ultimate Fallback: Try reading explicitly known potential container cookie volumes
-    let extra_cookies = vec!["../regtest/data/.cookie", "regtest/data/.cookie"];
-    for path in extra_cookies {
-        if Path::new(path).exists() {
-            if let Ok(client) =
-                Client::new(rpc_url, Auth::CookieFile(Path::new(path).to_path_buf()))
-            {
-                if client.get_blockchain_info().is_ok() {
-                    return Ok(client);
-                }
-            }
-        }
-    }
-
-    // Default back to an unauthenticated instance if all probing fails
-    Client::new(rpc_url, Auth::None)
-}
-
 fn main() -> bitcoincore_rpc::Result<()> {
-    // Connect to the Bitcoin Core RPC node using the dynamic credential matrix
-    let rpc = get_authenticated_client()?;
+    // 1. Point directly to the standard regtest cookie file location used by the test runner
+    let cookie_path = Path::new("regtest/data/.cookie");
+    let fallback_path = Path::new("../regtest/data/.cookie");
 
-    // Extract authorization payload properties to securely pass forward into wallet client context bindings
+    let auth = if cookie_path.exists() {
+        Auth::CookieFile(cookie_path.to_path_buf())
+    } else if fallback_path.exists() {
+        Auth::CookieFile(fallback_path.to_path_buf())
+    } else {
+        Auth::None
+    };
+
+    let rpc_url = "http://127.0.0.1:18443";
+    let rpc = Client::new(rpc_url, auth.clone())?;
+
+    // Verify connection
     let info = rpc.get_blockchain_info()?;
-    println!("Blockchain Info: {:?} - main.rs:55", info);
 
     // ==========================================
     // 1. Create/Load Wallets ('Miner' and 'Trader')
     // ==========================================
-    println!("Setting up wallets... - main.rs:60");
     let _ = rpc.create_wallet("Miner", Some(false), Some(false), None, None);
     let _ = rpc.create_wallet("Trader", Some(false), Some(false), None, None);
 
-    // Bind wallet contexts directly onto routed network addresses
-    let miner_rpc = Client::new("http://127.0.0.1:18443/wallet/Miner", Auth::None)
-        .and_then(|c| {
-            if c.get_wallet_info().is_ok() {
-                Ok(c)
-            } else {
-                Err(bitcoincore_rpc::Error::Rpc(
-                    bitcoincore_rpc::jsonrpc::error::Error::NoErrorOrResult,
-                ))
-            }
-        })
-        .or_else(|_| {
-            Client::new(
-                "http://127.0.0.1:18443/wallet/Miner",
-                Auth::UserPass("rpcuser".to_string(), "rpcpassword".to_string()),
-            )
-        })
-        .or_else(|_| {
-            Client::new(
-                "http://127.0.0.1:18443/wallet/Miner",
-                Auth::UserPass("alice".to_string(), "password".to_string()),
-            )
-        })?;
-
-    let trader_rpc = Client::new("http://127.0.0.1:18443/wallet/Trader", Auth::None)
-        .and_then(|c| {
-            if c.get_wallet_info().is_ok() {
-                Ok(c)
-            } else {
-                Err(bitcoincore_rpc::Error::Rpc(
-                    bitcoincore_rpc::jsonrpc::error::Error::NoErrorOrResult,
-                ))
-            }
-        })
-        .or_else(|_| {
-            Client::new(
-                "http://127.0.0.1:18443/wallet/Trader",
-                Auth::UserPass("rpcuser".to_string(), "rpcpassword".to_string()),
-            )
-        })
-        .or_else(|_| {
-            Client::new(
-                "http://127.0.0.1:18443/wallet/Trader",
-                Auth::UserPass("alice".to_string(), "password".to_string()),
-            )
-        })?;
+    let miner_rpc = Client::new("http://127.0.0.1:18443/wallet/Miner", auth.clone())?;
+    let trader_rpc = Client::new("http://127.0.0.1:18443/wallet/Trader", auth.clone())?;
 
     // ==========================================
     // 2. Generate spendable balances in Miner wallet
@@ -150,9 +75,8 @@ fn main() -> bitcoincore_rpc::Result<()> {
     )?;
 
     // ==========================================
-    // 5. Check transaction in mempool
+    // 5. Extract Details for Output File
     // ==========================================
-    let mempool_entry = miner_rpc.get_mempool_entry(&txid)?;
     let tx_info = miner_rpc.get_transaction(&txid, Some(true))?;
     let raw_tx = miner_rpc.get_raw_transaction(&txid, None)?;
 
@@ -184,7 +108,9 @@ fn main() -> bitcoincore_rpc::Result<()> {
         - tx_info.fee.unwrap_or_default().to_btc().abs();
 
     for detail in &tx_info.details {
-        if detail.category == bitcoincore_rpc::json::GetTransactionResultDetailCategory::Receive {
+        if detail.category
+            == bitcoincore_rpc::json::GetTransactionResultDetailCategory::Receive
+        {
             if let Some(ref addr) = detail.address {
                 miner_change_address = addr.clone().assume_checked().to_string();
                 miner_change_amount_btc = detail.amount.to_btc();
@@ -226,6 +152,5 @@ fn main() -> bitcoincore_rpc::Result<()> {
         let _ = write_file_contents(f2);
     }
 
-    println!("All tasks processed successfully! - main.rs:193");
     Ok(())
 }
