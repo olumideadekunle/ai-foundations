@@ -1,14 +1,12 @@
 #![allow(unused)]
 use bitcoincore_rpc::bitcoin::Amount;
 use bitcoincore_rpc::{Auth, Client, RpcApi};
-use serde::Deserialize;
-use serde_json::json;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
 fn main() -> bitcoincore_rpc::Result<()> {
-    // 1. Point directly to the standard regtest cookie file location used by the test runner
+    // 1. Setup connection using cookie authentication
     let cookie_path = Path::new("regtest/data/.cookie");
     let fallback_path = Path::new("../regtest/data/.cookie");
 
@@ -20,24 +18,16 @@ fn main() -> bitcoincore_rpc::Result<()> {
         Auth::None
     };
 
-    let rpc_url = "http://127.0.0.1:18443";
-    let rpc = Client::new(rpc_url, auth.clone())?;
+    let rpc = Client::new("http://127.0.0.1:18443", auth.clone())?;
 
-    // Verify connection
-    let info = rpc.get_blockchain_info()?;
-
-    // ==========================================
-    // 1. Create/Load Wallets ('Miner' and 'Trader')
-    // ==========================================
+    // 2. Setup wallets
     let _ = rpc.create_wallet("Miner", Some(false), Some(false), None, None);
     let _ = rpc.create_wallet("Trader", Some(false), Some(false), None, None);
 
     let miner_rpc = Client::new("http://127.0.0.1:18443/wallet/Miner", auth.clone())?;
     let trader_rpc = Client::new("http://127.0.0.1:18443/wallet/Trader", auth.clone())?;
 
-    // ==========================================
-    // 2. Generate spendable balances in Miner wallet
-    // ==========================================
+    // 3. Generate addresses and mine until balance exists
     let miner_address = miner_rpc
         .get_new_address(Some("Mining Reward"), None)?
         .assume_checked();
@@ -52,20 +42,13 @@ fn main() -> bitcoincore_rpc::Result<()> {
         miner_rpc.generate_to_address(1, &miner_address)?;
     }
 
-    // ==========================================
-    // 3. Load Trader wallet and generate a new address
-    // ==========================================
+    // 4. Send 20 BTC to Trader
     let trader_address = trader_rpc
         .get_new_address(Some("Received"), None)?
         .assume_checked();
-    let amount_to_send = Amount::from_btc(20.0).unwrap();
-
-    // ==========================================
-    // 4. Send 20 BTC from Miner to Trader
-    // ==========================================
     let txid = miner_rpc.send_to_address(
         &trader_address,
-        amount_to_send,
+        Amount::from_btc(20.0).unwrap(),
         None,
         None,
         None,
@@ -74,9 +57,7 @@ fn main() -> bitcoincore_rpc::Result<()> {
         None,
     )?;
 
-    // ==========================================
-    // 5. Extract Details for Output File
-    // ==========================================
+    // 5. Extract transaction details
     let tx_info = miner_rpc.get_transaction(&txid, Some(true))?;
     let raw_tx = miner_rpc.get_raw_transaction(&txid, None)?;
 
@@ -118,37 +99,28 @@ fn main() -> bitcoincore_rpc::Result<()> {
 
     let tx_fees_btc = tx_info.fee.unwrap_or_default().to_btc().abs();
 
-    // ==========================================
-    // 6. Mine 1 block to confirm the transaction
-    // ==========================================
+    // 6. Mine confirmation block
     let conf_hashes = miner_rpc.generate_to_address(1, &miner_address)?;
     let block_hash = conf_hashes.first().expect("Failed to mine block");
-    let block_info = miner_rpc.get_block_info(block_hash)?;
-    let block_height = block_info.height;
+    let block_height = miner_rpc.get_block_info(block_hash)?.height;
 
-    // ==========================================
-    // 7. Write the data to out.txt
-    // ==========================================
-    let write_file_contents = |mut file: File| -> std::io::Result<()> {
+    // 7. Write out.txt (Integer style for amounts)
+    let write_file = |path: &str| -> std::io::Result<()> {
+        let mut file = File::create(path)?;
         writeln!(file, "{}", txid)?;
         writeln!(file, "{}", miner_input_address)?;
-        writeln!(file, "{:.1}", miner_input_amount_btc)?;
+        writeln!(file, "{}", miner_input_amount_btc)?;
         writeln!(file, "{}", trader_output_address)?;
-        writeln!(file, "{:.1}", trader_output_amount_btc)?;
+        writeln!(file, "{}", trader_output_amount_btc)?;
         writeln!(file, "{}", miner_change_address)?;
         writeln!(file, "{}", miner_change_amount_btc)?;
         writeln!(file, "-{}", tx_fees_btc)?;
         writeln!(file, "{}", block_height)?;
-        writeln!(file, "{}", block_hash)?;
-        Ok(())
+        writeln!(file, "{}", block_hash)
     };
 
-    if let Ok(f1) = File::create("out.txt") {
-        let _ = write_file_contents(f1);
-    }
-    if let Ok(f2) = File::create("../out.txt") {
-        let _ = write_file_contents(f2);
-    }
+    let _ = write_file("out.txt");
+    let _ = write_file("../out.txt");
 
     Ok(())
 }
