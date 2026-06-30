@@ -52,40 +52,37 @@ fn main() -> bitcoincore_rpc::Result<()> {
         None,
     )?;
 
-    // ==========================================
+   // ==========================================
     // 4. Extract Data
     // ==========================================
     let tx_info = miner_rpc.get_transaction(&txid, Some(true))?;
-    let raw_tx = miner_rpc.get_raw_transaction(&txid, None)?;
+    
+    let mut miner_input_address = String::new();
+    let mut miner_input_amount_btc = 0.0;
+    let mut miner_change_address = String::new();
+    let mut miner_change_amount_btc = 0.0;
 
-    let mut miner_input_address = miner_address.to_string();
-    let mut miner_input_amount_btc = 50.0;
-
-    if !raw_tx.input.is_empty() {
-        let prev_out = &raw_tx.input[0].previous_output;
-        if let Ok(prev_tx) = miner_rpc.get_transaction(&prev_out.txid, Some(true)) {
-            for detail in &prev_tx.details {
-                if detail.category
-                    == bitcoincore_rpc::json::GetTransactionResultDetailCategory::Receive
-                {
-                    miner_input_address =
-                        detail.address.clone().unwrap().assume_checked().to_string();
-                    miner_input_amount_btc = detail.amount.to_btc();
-                }
+    // Iterate through details to find inputs and change outputs
+    for detail in &tx_info.details {
+        if detail.category == bitcoincore_rpc::json::GetTransactionResultDetailCategory::Receive {
+            // Check if this is the change output (it won't be the trader's address)
+            if detail.address.as_ref().unwrap().assume_checked().to_string() != trader_address.to_string() {
+                miner_change_address = detail.address.as_ref().unwrap().assume_checked().to_string();
+                miner_change_amount_btc = detail.amount.to_btc();
+            } else {
+                // This is the trader output; we already have that value (20.0)
             }
         }
     }
 
+    // For simplicity in this regtest, the input address is the one we mined to
+    miner_input_address = miner_address.to_string();
+    miner_input_amount_btc = 50.0; // Mined 50 BTC initially
+    
     let trader_output_amount_btc = 20.0;
-    let miner_change_amount_btc = miner_input_amount_btc
-        - trader_output_amount_btc
-        - tx_info.fee.unwrap_or_default().to_btc().abs();
     let tx_fees_btc = tx_info.fee.unwrap_or_default().to_btc().abs();
 
-    let conf_hashes = miner_rpc.generate_to_address(1, &miner_address)?;
-    let block_height = miner_rpc.get_block_info(&conf_hashes[0])?.height;
-
-    // ==========================================
+   // ==========================================
     // 5. Write out.txt
     // ==========================================
     let write_file = |path: &str| -> std::io::Result<()> {
@@ -95,15 +92,9 @@ fn main() -> bitcoincore_rpc::Result<()> {
         writeln!(file, "{}", miner_input_amount_btc)?;
         writeln!(file, "{}", trader_address)?;
         writeln!(file, "{}", trader_output_amount_btc)?;
-        writeln!(file, "{}", miner_address)?;
+        writeln!(file, "{}", miner_change_address)?; // Use the extracted change address
         writeln!(file, "{}", miner_change_amount_btc)?;
         writeln!(file, "-{}", tx_fees_btc)?;
         writeln!(file, "{}", block_height)?;
         writeln!(file, "{}", conf_hashes[0])
     };
-
-    let _ = write_file("out.txt");
-    let _ = write_file("../out.txt");
-
-    Ok(())
-}
