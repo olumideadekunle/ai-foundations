@@ -108,9 +108,7 @@ fn main() -> bitcoincore_rpc::Result<()> {
         - tx_info.fee.unwrap_or_default().to_btc().abs();
 
     for detail in &tx_info.details {
-        if detail.category
-            == bitcoincore_rpc::json::GetTransactionResultDetailCategory::Receive
-        {
+        if detail.category == bitcoincore_rpc::json::GetTransactionResultDetailCategory::Receive {
             if let Some(ref addr) = detail.address {
                 miner_change_address = addr.clone().assume_checked().to_string();
                 miner_change_amount_btc = detail.amount.to_btc();
