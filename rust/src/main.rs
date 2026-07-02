@@ -11,10 +11,14 @@ fn main() -> bitcoincore_rpc::Result<()> {
     let miner_rpc = Client::new(format!("{}/wallet/Miner", rpc_url).as_str(), auth.clone())?;
     let trader_rpc = Client::new(format!("{}/wallet/Trader", rpc_url).as_str(), auth.clone())?;
 
-    let miner_addr = miner_rpc.get_new_address(Some("Mining Reward"), None)?.assume_checked();
+    let miner_addr = miner_rpc
+        .get_new_address(Some("Mining Reward"), None)?
+        .assume_checked();
     miner_rpc.generate_to_address(1, &miner_addr)?;
 
-    let trader_addr = trader_rpc.get_new_address(Some("Received"), None)?.assume_checked();
+    let trader_addr = trader_rpc
+        .get_new_address(Some("Received"), None)?
+        .assume_checked();
     let txid = miner_rpc.send_to_address(
         &trader_addr,
         Amount::from_btc(20.0).unwrap(),
