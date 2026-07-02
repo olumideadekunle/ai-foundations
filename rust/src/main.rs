@@ -1,13 +1,3 @@
-let miner_rpc = Client::new(format!("{}/wallet/Miner", rpc_url).as_str(), auth.clone())?;
-    let trader_rpc = Client::new(format!("{}/wallet/Trader", rpc_url).as_str(), auth.clone())?;
-
-    // INSERT THESE TWO LINES HERE:
-    let _ = miner_rpc.load_wallet("Miner");
-    let _ = trader_rpc.load_wallet("Trader");
-
-    let miner_addr = miner_rpc
-        .get_new_address(Some("Mining Reward"), None)?
-
 #![allow(unused)]
 use bitcoincore_rpc::bitcoin::Amount;
 use bitcoincore_rpc::{Auth, Client, RpcApi};
@@ -20,6 +10,10 @@ fn main() -> bitcoincore_rpc::Result<()> {
 
     let miner_rpc = Client::new(format!("{}/wallet/Miner", rpc_url).as_str(), auth.clone())?;
     let trader_rpc = Client::new(format!("{}/wallet/Trader", rpc_url).as_str(), auth.clone())?;
+
+    // These two lines are mandatory to fix the "-18" error:
+    let _ = miner_rpc.load_wallet("Miner");
+    let _ = trader_rpc.load_wallet("Trader");
 
     let miner_addr = miner_rpc
         .get_new_address(Some("Mining Reward"), None)?
