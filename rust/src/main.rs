@@ -3,13 +3,22 @@ use bitcoincore_rpc::bitcoin::Amount;
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 use std::fs::File;
 use std::io::Write;
-
 fn main() -> bitcoincore_rpc::Result<()> {
     let rpc_url = "http://127.0.0.1:18443";
     let auth = Auth::UserPass("alice".to_string(), "password".to_string());
 
+    // 1. Connect to the GLOBAL node (no /wallet/ path)
+    let global_rpc = Client::new(rpc_url, auth.clone())?;
+
+    // 2. Load the wallets using the global connection
+    let _ = global_rpc.load_wallet("Miner");
+    let _ = global_rpc.load_wallet("Trader");
+
+    // 3. NOW connect to the specific wallet endpoints
     let miner_rpc = Client::new(format!("{}/wallet/Miner", rpc_url).as_str(), auth.clone())?;
     let trader_rpc = Client::new(format!("{}/wallet/Trader", rpc_url).as_str(), auth.clone())?;
+
+    // ... rest of your code ...
 
     // These two lines are mandatory to fix the "-18" error:
     let _ = miner_rpc.load_wallet("Miner");
