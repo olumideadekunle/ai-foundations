@@ -8,16 +8,21 @@ fn main() -> bitcoincore_rpc::Result<()> {
     let rpc_url = "http://127.0.0.1:18443";
     let auth = Auth::UserPass("alice".to_string(), "password".to_string());
 
-    // 1. Connect to the node generally and load the wallets
+    // 1. Connect to the node base
     let global_rpc = Client::new(rpc_url, auth.clone())?;
-    let _ = global_rpc.load_wallet("Miner");
-    let _ = global_rpc.load_wallet("Trader");
 
-    // 2. Now connect to the specific wallet endpoints
+    // 2. Use raw JSON-RPC to load wallets (Bypasses pathing issues)
+    let _ = global_rpc.call::<serde_json::Value>("loadwallet", &["Miner".to_string().into()]);
+    let _ = global_rpc.call::<serde_json::Value>("loadwallet", &["Trader".to_string().into()]);
+
+    // Give bitcoind a moment to initialize the loaded wallets
+    std::thread::sleep(std::time::Duration::from_secs(2));
+
+    // 3. Now connect to the wallet-specific paths
     let miner_rpc = Client::new(format!("{}/wallet/Miner", rpc_url).as_str(), auth.clone())?;
     let trader_rpc = Client::new(format!("{}/wallet/Trader", rpc_url).as_str(), auth.clone())?;
 
-    // 3. Proceed with your logic
+    // 4. Proceed with your logic
     let miner_addr = miner_rpc
         .get_new_address(Some("Mining Reward"), None)?
         .assume_checked();
@@ -41,7 +46,7 @@ fn main() -> bitcoincore_rpc::Result<()> {
     let hashes = miner_rpc.generate_to_address(1, &miner_addr)?;
     let block = miner_rpc.get_block_info(&hashes[0])?;
 
-    // 4. Create the output file in the current directory
+    // 5. Create the output file
     let mut file = File::create("out.txt").expect("Could not create out.txt");
     writeln!(file, "{}", txid)?;
     writeln!(file, "{}", miner_addr)?;
