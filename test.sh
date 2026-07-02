@@ -1,25 +1,30 @@
 #!/bin/bash
-set -e  # Exit immediately if any command fails
+set -e
 
-# 1. Spawn Bitcoind
+# Spawn Bitcoind
 docker compose up -d
-sleep 15
+sleep 15 
 
 echo "Waiting for bitcoind to be fully initialized..."
-# ... (Keep your existing while-loop check here) ...
+# (Keep your existing while-loop check here)
 
-# 2. Run your Rust project
+# Run your Rust project
 chmod +x ./rust/run-rust.sh
 ./rust/run-rust.sh
 
-# 3. DEBUG: Print the file contents so we can see what Rust wrote
-echo "--- CONTENT OF OUT.TXT ---"
+# DEBUG: Print the content to the log so we can see why the test fails
+echo "--- BEGIN DEBUG: CONTENT OF OUT.TXT ---"
 if [ -f "out.txt" ]; then
     cat out.txt
 else
-    echo "ERROR: out.txt was not found!"
+    # Check if it was created in the rust subdirectory instead
+    if [ -f "./rust/out.txt" ]; then
+        cat ./rust/out.txt
+    else
+        echo "ERROR: out.txt not found in root or ./rust/ folder"
+    fi
 fi
-echo "--- END OF CONTENT ---"
+echo "--- END DEBUG: CONTENT OF OUT.TXT ---"
 
-# 4. Clean up
+# Clean up
 docker compose down -v
