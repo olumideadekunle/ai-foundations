@@ -24,3 +24,9 @@ share/python-wheels/
 MANIFEST
 /node_modules/
 /rust/target/
+
+# Ignore Rust build artifacts in projects moved copy
+/projects/rust-capstone-project/rust/target/
+
+# Generic target ignore
+/target/
