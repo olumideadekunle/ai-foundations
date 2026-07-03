@@ -27,7 +27,10 @@ fn main() -> bitcoincore_rpc::Result<()> {
     let rpc_url = "http://127.0.0.1:18443";
     let auth = Auth::UserPass("alice".to_string(), "password".to_string());
 
-    if env::var("MOCK_RPC").map(|v| v == "1" || v.to_lowercase() == "true").unwrap_or(false) {
+    if env::var("MOCK_RPC")
+        .map(|v| v == "1" || v.to_lowercase() == "true")
+        .unwrap_or(false)
+    {
         eprintln!("MOCK_RPC set: writing mock ../out.txt and exiting");
         write_mock_out().expect("writing mock out.txt failed");
         return Ok(());
@@ -47,7 +50,9 @@ fn main() -> bitcoincore_rpc::Result<()> {
                 let miner_rpc = Client::new(&format!("{}/wallet/Miner", rpc_url), auth.clone())?;
                 let trader_rpc = Client::new(&format!("{}/wallet/Trader", rpc_url), auth.clone())?;
 
-                let miner_addr = miner_rpc.get_new_address(Some("Mining Reward"), None)?.assume_checked();
+                let miner_addr = miner_rpc
+                    .get_new_address(Some("Mining Reward"), None)?
+                    .assume_checked();
                 loop {
                     let balance = miner_rpc.get_balance(None, None)?;
                     if balance.to_btc() > 0.0 {
@@ -56,9 +61,14 @@ fn main() -> bitcoincore_rpc::Result<()> {
                     miner_rpc.generate_to_address(1, &miner_addr)?;
                 }
 
-                println!("Miner wallet balance: {} BTC", miner_rpc.get_balance(None, None)?.to_btc());
+                println!(
+                    "Miner wallet balance: {} BTC",
+                    miner_rpc.get_balance(None, None)?.to_btc()
+                );
 
-                let trader_addr = trader_rpc.get_new_address(Some("Received"), None)?.assume_checked();
+                let trader_addr = trader_rpc
+                    .get_new_address(Some("Received"), None)?
+                    .assume_checked();
 
                 let txid = miner_rpc.send_to_address(
                     &trader_addr,
@@ -81,7 +91,8 @@ fn main() -> bitcoincore_rpc::Result<()> {
                 let fee_btc = tx.fee.unwrap_or_default().to_btc().abs();
                 let change_amount_btc = 50.0 - 20.0 - fee_btc;
 
-                let mut file = File::create("../out.txt").expect("Could not create out.txt in root");
+                let mut file =
+                    File::create("../out.txt").expect("Could not create out.txt in root");
                 writeln!(file, "{}", txid)?;
                 writeln!(file, "{}", miner_addr)?;
                 writeln!(file, "50")?;
@@ -106,7 +117,10 @@ fn main() -> bitcoincore_rpc::Result<()> {
             Ok(())
         }
         Err(e) => {
-            eprintln!("Warning: could not connect to bitcoind RPC at {}: {}", rpc_url, e);
+            eprintln!(
+                "Warning: could not connect to bitcoind RPC at {}: {}",
+                rpc_url, e
+            );
             eprintln!("Falling back to mock output. To force mock mode set MOCK_RPC=1");
             write_mock_out().expect("writing mock out.txt failed");
             Ok(())
