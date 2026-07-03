@@ -1,0 +1,10 @@
+C:\Users\HP\rust-capstone-project\rust\target\debug\deps\hex_conservative-cda18eddc2d00fe6.d: C:\Users\HP\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hex-conservative-0.1.2\src\lib.rs C:\Users\HP\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hex-conservative-0.1.2\src\buf_encoder.rs C:\Users\HP\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hex-conservative-0.1.2\src\display.rs C:\Users\HP\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hex-conservative-0.1.2\src\error.rs C:\Users\HP\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hex-conservative-0.1.2\src\iter.rs C:\Users\HP\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hex-conservative-0.1.2\src\parse.rs
+
+C:\Users\HP\rust-capstone-project\rust\target\debug\deps\libhex_conservative-cda18eddc2d00fe6.rmeta: C:\Users\HP\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hex-conservative-0.1.2\src\lib.rs C:\Users\HP\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hex-conservative-0.1.2\src\buf_encoder.rs C:\Users\HP\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hex-conservative-0.1.2\src\display.rs C:\Users\HP\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hex-conservative-0.1.2\src\error.rs C:\Users\HP\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hex-conservative-0.1.2\src\iter.rs C:\Users\HP\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hex-conservative-0.1.2\src\parse.rs
+
+C:\Users\HP\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hex-conservative-0.1.2\src\lib.rs:
+C:\Users\HP\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hex-conservative-0.1.2\src\buf_encoder.rs:
+C:\Users\HP\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hex-conservative-0.1.2\src\display.rs:
+C:\Users\HP\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hex-conservative-0.1.2\src\error.rs:
+C:\Users\HP\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hex-conservative-0.1.2\src\iter.rs:
+C:\Users\HP\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\hex-conservative-0.1.2\src\parse.rs:
