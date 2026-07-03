@@ -1,0 +1,10 @@
+mock-txid-0000000000000000000000000000000000000000000000000000000000000000
+mock-miner-address
+50
+mock-trader-address
+20
+mock-change-address
+30.00000000
+0.00000000
+0
+mock-blockhash
